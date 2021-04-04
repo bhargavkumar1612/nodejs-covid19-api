@@ -5,7 +5,7 @@ const { open } = require("sqlite");
 
 const app = express();
 app.use(express.json());
-const dbPath = path.join(__dirname, "moviesData.db");
+const dbPath = path.join(__dirname, "covid19India.db");
 
 let db = null;
 
@@ -26,49 +26,159 @@ const initializeDBAndStartServer = async () => {
 };
 initializeDBAndStartServer();
 
-// get all movies api
-app.get("/movies/", async (request, response) => {
-  const allMoviesQuery = `
+// get all states api
+app.get("/states/", async (request, response) => {
+  const allStatesQuery = `
     select
-    movie_name
+    *
     from
-    movie;
+    state;
     `;
-  const allMovies = await db.all(allMoviesQuery);
-  const allMoviesResponse = allMovies.map((item) => {
-    return { movieName: item.movie_name };
+  const allStates = await db.all(allStatesQuery);
+  const allStatesResponse = allStates.map((item) => {
+    return {
+      stateId: item.state_id,
+      stateName: item.state_name,
+      population: item.population,
+    };
   });
-  response.send(allMoviesResponse);
+  response.send(allStatesResponse);
 });
 
-//post a new movie to the table api
-app.post("/movies/", async (request, response) => {
-  const movieDetails = request.body;
-  const { movieName, directorId, leadActor } = movieDetails;
-  const insertMovieQuery = `
+// get a state with state id api
+app.get("/states/:stateId", async (request, response) => {
+  stateId = request.params.stateId;
+  const getStateQuery = `
+    select
+    *
+    from
+    state
+    where state_id=${stateId};
+    `;
+  try {
+    const stateDetails = await db.get(getStateQuery);
+    const getStateResponse = {
+      stateId: stateDetails.state_id,
+      stateName: stateDetails.state_name,
+      population: stateDetails.population,
+    };
+    response.send(getStateResponse);
+  } catch (TypeError) {
+    console.log("state_id out of range");
+  }
+});
+
+//post a new district to the district table api
+app.post("/districts/", async (request, response) => {
+  const districtDetails = request.body;
+  const { districtName, stateId, cases, cured, deaths } = districtDetails;
+  const insertDistrictQuery = `
     insert
     into 
-    movie (movie_name, director_id, lead_actor)
-    values ('${movieName}','${directorId}','${leadActor}');
+    district (district_name, state_id, cases, cured, deaths)
+    values ('${districtName}',${stateId},${cases},${cured},${deaths});
     `;
-  await db.run(insertMovieQuery);
-  //   const movieId = dbResponse.lastID;
-  response.send("Movie Successfully Added");
+  await db.run(insertDistrictQuery);
+  response.send("District Successfully Added");
 });
 
-//update the movie details at the given movie id api
-app.put("/movies/:movieId", async (request, response) => {
-  const { movieId } = request.params;
-  const movieDetails = request.body;
-  const { movieName, directorId, leadActor } = movieDetails;
-  const updateMovieQuery = `
-    update movie 
-    set 
-    movie_name = '${movieName}',
-    director_id= ${directorId},
-    lead_actor="${leadActor}" 
-    where movie_id = ${movieId};
+// get a district with district id api
+app.get("/districts/:districtId", async (request, response) => {
+  districtId = request.params.districtId;
+  const getDistrictQuery = `
+    select
+    *
+    from
+    district
+    where district_id=${districtId};
     `;
-  await db.run(updateMovieQuery);
-  response.send(`Movie Details Updated`);
+  try {
+    const districtDetails = await db.get(getDistrictQuery);
+    const getDistrictResponse = {
+      districtId: districtDetails.district_id,
+      districtName: districtDetails.district_name,
+      stateId: districtDetails.state_id,
+      cases: districtDetails.cases,
+      cured: districtDetails.cured,
+      active: districtDetails.active,
+      deaths: districtDetails.deaths,
+    };
+    response.send(getDistrictResponse);
+  } catch (TypeError) {
+    console.log("id out of range");
+  }
 });
+
+// delete a district with given district Id
+
+app.delete("/districts/:districtId", async (request, response) => {
+  const { districtId } = request.params;
+  const deleteQuery = `
+         DELETE FROM district
+         WHERE
+            district_id = ${districtId};
+        `;
+  await db.run(deleteQuery);
+  response.send(`District Removed`);
+});
+
+//update the district details at the given district id api
+app.put("/districts/:districtId", async (request, response) => {
+  const { districtId } = request.params;
+  const districtDetails = request.body;
+  const { districtName, stateId, cases, cured, deaths } = districtDetails;
+  const updateDistrictQuery = `
+    update district 
+    set 
+    district_name="${districtName}",
+    state_id = ${stateId},
+    cases= ${cases},
+    cured=${cured},
+    deaths=${deaths}
+    where district_id = ${districtId};
+    `;
+  await db.run(updateDistrictQuery);
+  response.send(`District Details Updated`);
+});
+
+// get a the stats of a state with state id api
+app.get("/states/:stateId/stats/", async (request, response) => {
+  var stateId = request.params.stateId;
+  const getStateStatsQuery = `
+    select
+    sum(cases) as total_cases,
+    sum(cured) as cured_cases,
+    sum(active) as active_cases,
+    sum(deaths) as total_deaths
+    from
+    state left join district on district.state_id = state.state_id
+    where state.state_id=${stateId};
+    `;
+  try {
+    const stateStats = await db.get(getStateStatsQuery);
+    const getStateStatsResponse = {
+      totalCases: stateStats.total_cases,
+      curedCases: stateStats.cured_cases,
+      activeCases: stateStats.active_cases,
+      totalDeaths: stateStats.total_deaths,
+    };
+    response.send(getStateStatsResponse);
+  } catch (TypeError) {
+    console.log("id out of range");
+  }
+});
+
+// get the state with district id api
+app.get("/districts/:districtId/details/", async (request, response) => {
+  const districtId = request.params.districtId;
+  const districtStateQuery = `
+    select
+    state_name
+    from
+    state left join district on state.state_id = district.state_id
+    where district_id = ${districtId};
+    `;
+  const districtState = await db.get(districtStateQuery);
+  response.send(districtState);
+});
+module.exports = app;
