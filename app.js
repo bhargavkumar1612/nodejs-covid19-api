@@ -32,7 +32,9 @@ app.get("/states/", async (request, response) => {
     select
     *
     from
-    state;
+    state
+    order by
+    state_id;
     `;
   const allStates = await db.all(allStatesQuery);
   const allStatesResponse = allStates.map((item) => {
@@ -78,7 +80,7 @@ app.post("/districts/", async (request, response) => {
     district (district_name, state_id, cases, cured, deaths)
     values ('${districtName}',${stateId},${cases},${cured},${deaths});
     `;
-  await db.get(insertDistrictQuery);
+  await db.run(insertDistrictQuery);
   response.send("District Successfully Added");
 });
 
@@ -184,4 +186,5 @@ app.get("/districts/:districtId/details/", async (request, response) => {
   };
   response.send(districtStateResponse);
 });
+
 module.exports = app;
