@@ -72,14 +72,12 @@ app.get("/states/:stateId", async (request, response) => {
 
 //post a new district to the district table api
 app.post("/districts/", async (request, response) => {
-  const districtDetails = request.body;
-  const { districtName, stateId, cases, cured, deaths } = districtDetails;
+  const { districtName, stateId, cases, cured, active, deaths } = request.body;
   const insertDistrictQuery = `
-    insert
-    into
-    district (district_name, state_id, cases, cured, deaths)
-    values ('${districtName}',${stateId},${cases},${cured},${deaths});
-    `;
+    INSERT INTO
+    district (state_id, district_name, cases, cured, active, deaths)
+  VALUES
+    (${stateId}, '${districtName}', ${cases}, ${cured}, ${active}, ${deaths});`;
   await db.run(insertDistrictQuery);
   response.send("District Successfully Added");
 });
@@ -128,7 +126,14 @@ app.delete("/districts/:districtId", async (request, response) => {
 app.put("/districts/:districtId", async (request, response) => {
   const { districtId } = request.params;
   const districtDetails = request.body;
-  const { districtName, stateId, cases, cured, deaths } = districtDetails;
+  const {
+    districtName,
+    stateId,
+    cases,
+    cured,
+    deaths,
+    active,
+  } = districtDetails;
   const updateDistrictQuery = `
     update district 
     set 
@@ -136,6 +141,7 @@ app.put("/districts/:districtId", async (request, response) => {
     state_id = ${stateId},
     cases= ${cases},
     cured=${cured},
+    active=${active},
     deaths=${deaths}
     where district_id = ${districtId};
     `;
