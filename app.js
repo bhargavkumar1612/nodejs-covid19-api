@@ -74,11 +74,11 @@ app.post("/districts/", async (request, response) => {
   const { districtName, stateId, cases, cured, deaths } = districtDetails;
   const insertDistrictQuery = `
     insert
-    into 
+    into
     district (district_name, state_id, cases, cured, deaths)
     values ('${districtName}',${stateId},${cases},${cured},${deaths});
     `;
-  await db.run(insertDistrictQuery);
+  await db.get(insertDistrictQuery);
   response.send("District Successfully Added");
 });
 
@@ -138,7 +138,7 @@ app.put("/districts/:districtId", async (request, response) => {
     where district_id = ${districtId};
     `;
   await db.run(updateDistrictQuery);
-  response.send(`District Details Updated`);
+  response.send("District Details Updated");
 });
 
 // get a the stats of a state with state id api
@@ -158,8 +158,8 @@ app.get("/states/:stateId/stats/", async (request, response) => {
     const stateStats = await db.get(getStateStatsQuery);
     const getStateStatsResponse = {
       totalCases: stateStats.total_cases,
-      curedCases: stateStats.cured_cases,
-      activeCases: stateStats.active_cases,
+      totalCured: stateStats.cured_cases,
+      totalActive: stateStats.active_cases,
       totalDeaths: stateStats.total_deaths,
     };
     response.send(getStateStatsResponse);
@@ -179,6 +179,9 @@ app.get("/districts/:districtId/details/", async (request, response) => {
     where district_id = ${districtId};
     `;
   const districtState = await db.get(districtStateQuery);
-  response.send(districtState);
+  const districtStateResponse = {
+    stateName: districtState.state_name,
+  };
+  response.send(districtStateResponse);
 });
 module.exports = app;
